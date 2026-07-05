@@ -1,3 +1,7 @@
 *.csv
 *.xlsx
 *.zip
+*.venv
+frontend
+run_frontend.py
+__pycache__
