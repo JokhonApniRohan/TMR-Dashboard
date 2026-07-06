@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TMR Tracking Dashboard</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- Tabler Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <img src="assets/upay_logo.png" alt="UPAY Logo" onerror="this.style.display='none'" />
+      </div>
+      <div>
+        <div class="brand-name">TMR Tracker</div>
+        <div class="brand-sub">Field Operations</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+
+      <a href="index.html" class="nav-item active">
+        <i class="ti ti-layout-dashboard nav-icon"></i>
+        Dashboard
+      </a>
+      <a href="tmr-report.html" class="nav-item">
+        <i class="ti ti-users nav-icon"></i>
+        TMR Report
+      </a>
+      <a href="attendance.html" class="nav-item">
+        <i class="ti ti-calendar-stats nav-icon"></i>
+        Attendance
+      </a>
+      <a href="kpi.html" class="nav-item">
+        <i class="ti ti-chart-bar nav-icon"></i>
+        KPI
+      </a>
+
+      <div class="nav-section-label">Data</div>
+
+      <a href="upload.html" class="nav-item">
+        <i class="ti ti-file-upload nav-icon"></i>
+        Upload Excel
+      </a>
+      <a href="#" class="nav-item" id="exportBtn">
+        <i class="ti ti-download nav-icon"></i>
+        Export Report
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      Last upload: <span id="lastUpload">—</span>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <div class="main-content">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="btn btn-secondary btn-sm" id="menuToggle" title="Toggle sidebar">
+          <i class="ti ti-menu-2"></i>
+        </button>
+        <div>
+          <div class="page-title">Dashboard</div>
+          <div class="page-subtitle" id="dateRangeLabel">Loading data…</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-secondary btn-sm" id="refreshBtn">
+          <i class="ti ti-refresh btn-icon"></i> Refresh
+        </button>
+        <a href="upload.html" class="btn btn-primary btn-sm">
+          <i class="ti ti-upload btn-icon"></i> Upload Excel
+        </a>
+      </div>
+    </header>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label for="filterFrom">From</label>
+        <input type="date" id="filterFrom" />
+      </div>
+      <div class="filter-group">
+        <label for="filterTo">To</label>
+        <input type="date" id="filterTo" />
+      </div>
+      <div class="filter-group">
+        <label for="filterRegion">Region</label>
+        <select id="filterRegion">
+          <option value="">All Regions</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-sm" id="applyFilter">
+        <i class="ti ti-filter btn-icon"></i> Apply
+      </button>
+      <button class="btn btn-secondary btn-sm" id="clearFilter">Clear</button>
+    </div>
+
+    <!-- Page Body -->
+    <main class="page-body">
+
+      <!-- No data alert (shown when no data uploaded yet) -->
+      <div class="alert alert-info" id="noDataAlert" style="display:none;">
+        <i class="ti ti-info-circle" style="font-size:16px;flex-shrink:0;"></i>
+        <span>No data loaded yet. <a href="upload.html">Upload your Excel files</a> to see the dashboard.</span>
+      </div>
+
+      <!-- ===== METRIC CARDS ===== -->
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-label">Total TMRs</div>
+          <div class="metric-value" id="totalTMR">—</div>
+          <div class="metric-sub">Active field reps</div>
+        </div>
+        <div class="metric-card green">
+          <div class="metric-label">Avg Attendance</div>
+          <div class="metric-value" id="avgAttendance">—</div>
+          <div class="metric-sub" id="attendanceTrend">MTD</div>
+        </div>
+        <div class="metric-card amber">
+          <div class="metric-label">Avg Strike Rate</div>
+          <div class="metric-value" id="avgStrike">—</div>
+          <div class="metric-sub" id="strikeTarget">Daily visits avg</div>
+        </div>
+        <div class="metric-card" id="marketHourCard">
+          <div class="metric-label">Avg Market Hours</div>
+          <div class="metric-value" id="avgMarketHour">—</div>
+          <div class="metric-sub" id="marketHourStatus">Target: 7h/day</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Total Visits (MTD)</div>
+          <div class="metric-value" id="totalVisits">—</div>
+          <div class="metric-sub">Unique agent visits</div>
+        </div>
+        <div class="metric-card red">
+          <div class="metric-label">Below Attendance</div>
+          <div class="metric-value" id="belowAttendTMR">—</div>
+          <div class="metric-sub">TMRs &lt; 75% target</div>
+        </div>
+      </div>
+
+      <!-- ===== ROW 2: Charts ===== -->
+      <div class="two-col" style="margin-bottom:20px;">
+
+        <!-- Strike Rate Chart -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Strike rate by TMR</div>
+              <div class="section-sub">Daily avg visits vs target</div>
+            </div>
+            <select id="strikeChartRegion" style="font-size:11px;height:28px;">
+              <option value="">All</option>
+            </select>
+          </div>
+          <div class="card-body" style="padding:14px 12px;">
+            <canvas id="strikeChart" height="220"></canvas>
+          </div>
+        </div>
+
+        <!-- Attendance % Chart -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Attendance % by TMR</div>
+              <div class="section-sub">Present days / payable days</div>
+            </div>
+          </div>
+          <div class="card-body" style="padding:14px 12px;">
+            <canvas id="attendanceChart" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== ROW 3: Performers + KPI Breakdown ===== -->
+      <div class="two-col" style="margin-bottom:20px;">
+
+        <!-- Above / Below Average Performers -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Performance summary</div>
+            <div style="display:flex;gap:6px;">
+              <span class="badge badge-above">▲ Above</span>
+              <span class="badge badge-below">▼ Below</span>
+            </div>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div class="table-wrap" style="max-height:300px;overflow-y:auto;">
+              <table id="performanceTable">
+                <thead>
+                  <tr>
+                    <th>TMR Name</th>
+                    <th>Region</th>
+                    <th>Attend%</th>
+                    <th>Strike</th>
+                    <th>Mkt Hr</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="performanceTbody">
+                  <tr><td colspan="6" class="empty-state" style="padding:24px;color:var(--text-muted);">No data loaded</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card-footer" style="font-size:11px;color:var(--text-muted);">
+            Above avg = Attendance ≥ 80% AND Strike ≥ target
+          </div>
+        </div>
+
+        <!-- KPI Breakdown -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">KPI breakdown (team avg)</div>
+            <div class="section-sub" id="kpiPeriodLabel">MTD</div>
+          </div>
+          <div class="card-body">
+            <!-- Market Hour KPI -->
+            <div style="margin-bottom:16px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+                <span style="font-size:12px;font-weight:500;color:var(--text-secondary);">Market Hours</span>
+                <span style="font-size:12px;font-weight:700;" id="kpiMarketHrScore">—</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" id="kpiMarketHrBar" style="width:0%;"></div>
+              </div>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Weight: 25% &nbsp;|&nbsp; Target: 7h/working day</div>
+            </div>
+
+            <!-- Strike Rate KPI -->
+            <div style="margin-bottom:16px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+                <span style="font-size:12px;font-weight:500;color:var(--text-secondary);">Strike Rate</span>
+                <span style="font-size:12px;font-weight:700;" id="kpiStrikeScore">—</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill amber" id="kpiStrikeBar" style="width:0%;"></div>
+              </div>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Weight: 35% &nbsp;|&nbsp; Target: 30–40 visits/day</div>
+            </div>
+
+            <!-- Frequency KPI -->
+            <div style="margin-bottom:16px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+                <span style="font-size:12px;font-weight:500;color:var(--text-secondary);">Frequency Achievement</span>
+                <span style="font-size:12px;font-weight:700;" id="kpiFreqScore">—</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill green" id="kpiFreqBar" style="width:0%;"></div>
+              </div>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:3px;">Weight: 40% &nbsp;|&nbsp; Target: 180–240 visits/week</div>
+            </div>
+
+            <hr class="divider" />
+
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:13px;font-weight:600;color:var(--text-primary);">Total KPI Score</span>
+              <span style="font-size:18px;font-weight:700;color:var(--blue);" id="kpiTotal">—</span>
+            </div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">30% of total salary</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== ROW 4: TMR Summary Table ===== -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">TMR summary table</div>
+            <div class="section-sub">Daily targets, attendance, leave counts, and KPI score by wallet</div>
+          </div>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap" style="min-height:260px;">
+            <table id="tmrSummaryTable">
+              <thead></thead>
+              <tbody id="tmrSummaryBody">
+                <tr><td colspan="14" style="text-align:center;padding:24px;color:var(--text-muted);">Loading table data…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== ROW 5: Daily trend & Top performers ===== -->
+      <div class="two-col">
+
+        <!-- Daily visit trend -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Daily visit trend</div>
+            <div class="section-sub">Total team visits per day</div>
+          </div>
+          <div class="card-body" style="padding:14px 12px;">
+            <canvas id="trendChart" height="180"></canvas>
+          </div>
+        </div>
+
+        <!-- Top / Bottom 5 performers -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Top &amp; bottom performers</div>
+          </div>
+          <div class="card-body" style="padding:12px 16px;">
+            <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Top 5 — Strike Rate</div>
+            <div id="topPerformers" class="kpi-block"></div>
+            <hr class="divider" />
+            <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Bottom 5 — Strike Rate</div>
+            <div id="bottomPerformers" class="kpi-block"></div>
+          </div>
+        </div>
+
+      </div>
+
+    </main><!-- /page-body -->
+  </div><!-- /main-content -->
+</div><!-- /app-shell -->
+
+<script src="js/main.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

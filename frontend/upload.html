@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upload Data — TMR Tracker</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+    .file-drop { border: 2px dashed var(--border); border-radius: var(--radius-lg); padding: 40px 24px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative; }
+    .file-drop:hover, .file-drop.drag-over { border-color: var(--blue); background: var(--blue-light); }
+    .file-drop.ready { border-color: var(--green); background: var(--green-light); }
+    .file-drop input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .drop-icon { font-size: 44px; color: var(--text-muted); margin-bottom: 10px; }
+    .file-drop.ready .drop-icon { color: var(--green); }
+    .drop-title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+    .drop-sub { font-size: 12px; color: var(--text-muted); }
+    .file-chosen { font-size: 12px; color: var(--green); margin-top: 8px; font-weight: 500; display:none; }
+    .file-drop.ready .file-chosen { display: block; }
+    .preview-table { font-size: 11px; }
+    .preview-table th { font-size: 10px; padding: 6px 8px; }
+    .preview-table td { padding: 5px 8px; }
+    .log-box { background: #1a1a2e; color: #a8ffc4; font-family: monospace; font-size: 12px; padding: 14px 16px; border-radius: var(--radius); max-height: 220px; overflow-y: auto; line-height: 1.7; }
+    .log-box .log-err { color: #ff8080; }
+    .log-box .log-warn { color: var(--amber); }
+    .log-box .log-ok { color: #a8ffc4; }
+    .log-box .log-info { color: #80d8ff; }
+    .step-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .step-row:last-child { border-bottom: none; }
+    .step-num { width: 28px; height: 28px; background: var(--blue-light); color: var(--blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+    .step-num.done { background: var(--green-light); color: var(--green); }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark"><img src="assets/upay_logo.png" alt="UPAY Logo" onerror="this.style.display='none'" /></div>
+      <div>
+        <div class="brand-name">TMR Tracker</div>
+        <div class="brand-sub">Field Operations</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a href="index.html" class="nav-item"><i class="ti ti-layout-dashboard nav-icon"></i> Dashboard</a>
+      <a href="tmr-report.html" class="nav-item"><i class="ti ti-users nav-icon"></i> TMR Report</a>
+      <a href="attendance.html" class="nav-item"><i class="ti ti-calendar-stats nav-icon"></i> Attendance</a>
+      <a href="kpi.html" class="nav-item"><i class="ti ti-chart-bar nav-icon"></i> KPI</a>
+      <div class="nav-section-label">Data</div>
+      <a href="upload.html" class="nav-item active"><i class="ti ti-file-upload nav-icon"></i> Upload Excel</a>
+      <a href="#" class="nav-item"><i class="ti ti-download nav-icon"></i> Export Report</a>
+    </nav>
+    <div class="sidebar-footer">Last upload: <span id="lastUpload">—</span></div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="btn btn-secondary btn-sm" id="menuToggle"><i class="ti ti-menu-2"></i></button>
+        <div>
+          <div class="page-title">Upload Data</div>
+          <div class="page-subtitle">Upload daily activity and summary Excel files</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-secondary btn-sm" id="clearDataBtn" style="color:var(--red);border-color:var(--red);"><i class="ti ti-trash btn-icon"></i> Clear all data</button>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header"><div class="card-title">How it works</div></div>
+        <div class="card-body">
+          <div class="step-row"><div class="step-num done">1</div><div>Upload the Daily Activity and Date-wise Summary Excel files from your source system.</div></div>
+          <div class="step-row"><div class="step-num">2</div><div>The app reads the files and prepares them for attendance and KPI calculations.</div></div>
+          <div class="step-row"><div class="step-num">3</div><div>Click Process &amp; Save to store the data locally for the dashboard and reports.</div></div>
+          <div class="step-row"><div class="step-num">4</div><div>Use the Dashboard, TMR Report, Attendance, and KPI pages to review the results.</div></div>
+        </div>
+      </div>
+
+      <div class="metric-grid" style="margin-bottom:20px;">
+        <div class="metric-card"><div class="metric-label">Daily rows stored</div><div class="metric-value" id="statDailyRows">—</div><div class="metric-sub">Activity records</div></div>
+        <div class="metric-card green"><div class="metric-label">Summary rows stored</div><div class="metric-value" id="statSummaryRows">—</div><div class="metric-sub">Date-wise records</div></div>
+        <div class="metric-card amber"><div class="metric-label">Unique TMRs</div><div class="metric-value" id="statTMRs">—</div><div class="metric-sub">In stored data</div></div>
+        <div class="metric-card"><div class="metric-label">Date range</div><div class="metric-value" style="font-size:14px;" id="statDateRange">—</div><div class="metric-sub">Earliest → latest</div></div>
+      </div>
+
+      <div class="upload-grid">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title"><i class="ti ti-file-spreadsheet" style="color:var(--blue);margin-right:4px;"></i> Daily Activity Report</div>
+              <div class="section-sub">Columns such as created_at, tmr_wallet, agent_wallet, checkin_time, visit_time_h_m_s</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="file-drop" id="dailyDrop">
+              <input type="file" id="dailyFile" accept=".xlsx,.xls,.csv" />
+              <div class="drop-icon"><i class="ti ti-table-import"></i></div>
+              <div class="drop-title">Drop Daily Activity file here</div>
+              <div class="drop-sub">or click to browse — .xlsx / .xls / .csv</div>
+              <div class="file-chosen" id="dailyChosen">✓ File selected</div>
+            </div>
+            <div id="dailyPreviewWrap" style="margin-top:14px;display:none;">
+              <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:6px;">Preview (first 5 rows)</div>
+              <div class="table-wrap" style="max-height:180px;overflow-y:auto;"><table class="preview-table" id="dailyPreview"></table></div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:6px;" id="dailyRowCount"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title"><i class="ti ti-file-spreadsheet" style="color:var(--amber-dark);margin-right:4px;"></i> Date-wise Summary Report</div>
+              <div class="section-sub">Columns such as date_, region, tmr_wallet, agent_visit_count, working_time_h_m_s</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="file-drop" id="summaryDrop">
+              <input type="file" id="summaryFile" accept=".xlsx,.xls,.csv" />
+              <div class="drop-icon"><i class="ti ti-table-import"></i></div>
+              <div class="drop-title">Drop Summary Report file here</div>
+              <div class="drop-sub">or click to browse — .xlsx / .xls / .csv</div>
+              <div class="file-chosen" id="summaryChosen">✓ File selected</div>
+            </div>
+            <div id="summaryPreviewWrap" style="margin-top:14px;display:none;">
+              <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:6px;">Preview (first 5 rows)</div>
+              <div class="table-wrap" style="max-height:180px;overflow-y:auto;"><table class="preview-table" id="summaryPreview"></table></div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:6px;" id="summaryRowCount"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-bottom:20px;align-items:center;">
+        <button class="btn btn-primary" id="processBtn" disabled><i class="ti ti-device-floppy btn-icon"></i> Process &amp; Save</button>
+        <button class="btn btn-secondary" id="resetFilesBtn"><i class="ti ti-rotate btn-icon"></i> Reset files</button>
+        <span style="font-size:12px;color:var(--text-muted);" id="processStatus"></span>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Processing log</div>
+          <button class="btn btn-secondary btn-sm" id="clearLogBtn">Clear log</button>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <div class="log-box" id="logBox"><span class="log-info">► Ready. Upload files above and click Process &amp; Save.</span></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/main.js"></script>
+<script src="js/upload.js"></script>
+</body>
+</html>

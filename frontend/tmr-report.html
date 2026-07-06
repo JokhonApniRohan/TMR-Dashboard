@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TMR Report — TMR Tracker</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" />
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark"><img src="assets/upay_logo.png" alt="UPAY Logo" onerror="this.style.display='none'" /></div>
+      <div>
+        <div class="brand-name">TMR Tracker</div>
+        <div class="brand-sub">Field Operations</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a href="index.html" class="nav-item"><i class="ti ti-layout-dashboard nav-icon"></i> Dashboard</a>
+      <a href="tmr-report.html" class="nav-item active"><i class="ti ti-users nav-icon"></i> TMR Report</a>
+      <a href="attendance.html" class="nav-item"><i class="ti ti-calendar-stats nav-icon"></i> Attendance</a>
+      <a href="kpi.html" class="nav-item"><i class="ti ti-chart-bar nav-icon"></i> KPI</a>
+      <div class="nav-section-label">Data</div>
+      <a href="upload.html" class="nav-item"><i class="ti ti-file-upload nav-icon"></i> Upload Excel</a>
+      <a href="#" class="nav-item"><i class="ti ti-download nav-icon"></i> Export Report</a>
+    </nav>
+    <div class="sidebar-footer">Last upload: <span id="lastUpload">—</span></div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="btn btn-secondary btn-sm" id="menuToggle"><i class="ti ti-menu-2"></i></button>
+        <div>
+          <div class="page-title">TMR Report</div>
+          <div class="page-subtitle">Wallet-wise performance and attendance review</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-primary btn-sm" id="exportTmrBtn"><i class="ti ti-download btn-icon"></i> Export</button>
+      </div>
+    </header>
+
+    <div class="filter-bar">
+      <div class="filter-group"><label for="filterFrom">From</label><input type="date" id="filterFrom" /></div>
+      <div class="filter-group"><label for="filterTo">To</label><input type="date" id="filterTo" /></div>
+      <div class="filter-group"><label for="filterRegion">Region</label><select id="filterRegion"><option value="">All Regions</option></select></div>
+      <div class="filter-group"><label for="filterWallet">Wallet</label><select id="filterWallet"><option value="">All wallets</option></select></div>
+      <button class="btn btn-primary btn-sm" id="applyFilters"><i class="ti ti-filter btn-icon"></i> Apply</button>
+      <button class="btn btn-secondary btn-sm" id="resetFilters">Reset</button>
+    </div>
+
+    <main class="page-body">
+      <div class="metric-grid" style="margin-bottom:20px;">
+        <div class="metric-card"><div class="metric-label">TMRs shown</div><div class="metric-value" id="summaryTmrCount">—</div><div class="metric-sub">Filtered wallets</div></div>
+        <div class="metric-card green"><div class="metric-label">Avg attendance</div><div class="metric-value" id="summaryAttendance">—</div><div class="metric-sub">Present payables</div></div>
+        <div class="metric-card amber"><div class="metric-label">Avg strike</div><div class="metric-value" id="summaryStrike">—</div><div class="metric-sub">Visits per day</div></div>
+        <div class="metric-card"><div class="metric-label">Avg KPI</div><div class="metric-value" id="summaryKpi">—</div><div class="metric-sub">Weighted score</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">TMR performance summary</div>
+            <div class="section-sub">Wallet-wise attendance, average market hours, strike rate, and KPI</div>
+          </div>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>TMR Wallet</th>
+                  <th>TMR Name</th>
+                  <th>Region</th>
+                  <th>Present Days</th>
+                  <th>Payable Days</th>
+                  <th>Attendance</th>
+                  <th>Avg Market Hrs</th>
+                  <th>Avg Strike</th>
+                  <th>KPI Score</th>
+                </tr>
+              </thead>
+              <tbody id="tmrReportBody">
+                <tr><td colspan="9" class="empty-state">No data yet. Upload files first.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/main.js"></script>
+<script src="js/tmr-report.js"></script>
+</body>
+</html>
+
+/* ---- Refresh stored data stats ---- */
+function refreshStats() {
+  const daily   = DB.getDailyRows();
+  const summary = DB.getSummaryRows();
+  document.getElementById('statDailyRows').textContent   = daily.length.toLocaleString();
+  document.getElementById('statSummaryRows').textContent = summary.length.toLocaleString();
+  const tmrs = new Set([...daily.map(r => r.tmr_wallet), ...summary.map(r => r.tmr_wallet)]);
+  document.getElementById('statTMRs').textContent = tmrs.size;
+  const dates = summary.map(r => String(r.date_).slice(0, 10)).sort();
+  document.getElementById('statDateRange').textContent = dates.length
+    ? `${dates[0].slice(5)} → ${dates[dates.length-1].slice(5)}`
+    : '—';
+  const cfg = DB.getConfig();
+  document.getElementById('lastUpload').textContent = cfg.lastUpload || 'Never';
+}
+
+/* ---- Parse Excel/CSV file → array of objects ---- */
+function parseFile(file, callback) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data  = new Uint8Array(e.target.result);
+      const wb    = XLSX.read(data, { type: 'array', cellDates: true });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows  = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      callback(null, rows);
+    } catch (err) {
+      callback(err, null);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* ---- Render preview table ---- */
+function renderPreview(tableId, rows) {
+  const preview = rows.slice(0, 5);
+  const headers = Object.keys(preview[0] || {});
+  const table   = document.getElementById(tableId);
+  table.innerHTML = `
+    <thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
+    <tbody>${preview.map(r =>
+      `<tr>${headers.map(h => `<td>${esc(String(r[h] ?? ''))}</td>`).join('')}</tr>`
+    ).join('')}</tbody>
+  `;
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ---- Normalise column names (trim whitespace, lowercase keys) ---- */
+function normaliseRow(row) {
+  const out = {};
+  Object.entries(row).forEach(([k, v]) => {
+    out[k.trim()] = v;
+  });
+  return out;
+}
+
+/* ---- Wire up one drop zone ---- */
+function wireDropZone(dropId, inputId, chosenId, previewWrapId, previewTableId, countId, type) {
+  const drop   = document.getElementById(dropId);
+  const input  = document.getElementById(inputId);
+  const chosen = document.getElementById(chosenId);
+
+  ['dragenter','dragover'].forEach(ev => {
+    drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('drag-over'); });
+  });
+  ['dragleave','drop'].forEach(ev => {
+    drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('drag-over'); });
+  });
+  drop.addEventListener('drop', (e) => {
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file, type, drop, chosen, previewWrapId, previewTableId, countId);
+  });
+  input.addEventListener('change', () => {
+    if (input.files[0]) handleFile(input.files[0], type, drop, chosen, previewWrapId, previewTableId, countId);
+  });
+}
+
+function handleFile(file, type, drop, chosenEl, previewWrapId, previewTableId, countId) {
+  log(`Reading file: ${file.name} (${(file.size/1024).toFixed(1)} KB)`, 'info');
+  parseFile(file, (err, rows) => {
+    if (err) {
+      log(`✗ Failed to parse file: ${err.message}`, 'err');
+      return;
+    }
+    const normalised = rows.map(normaliseRow);
+    if (type === 'daily') {
+      dailyParsed = normalised;
+    } else {
+      summaryParsed = normalised;
+    }
+    drop.classList.add('ready');
+    chosenEl.textContent = `✓ ${file.name} — ${rows.length} rows loaded`;
+    document.getElementById(previewWrapId).style.display = 'block';
+    document.getElementById(countId).textContent = `${rows.length} rows, ${Object.keys(rows[0]||{}).length} columns`;
+    renderPreview(previewTableId, normalised);
+    log(`✓ Parsed ${rows.length} rows from "${file.name}"`, 'ok');
+
+    /* enable process button if at least one file loaded */
+    const canProcess = dailyParsed !== null || summaryParsed !== null;
+    document.getElementById('processBtn').disabled = !canProcess;
+  });
+}
+
+/* ---- Process & Save ---- */
+document.getElementById('processBtn').addEventListener('click', () => {
+  log('─── Starting processing ───', 'info');
+  let addedDaily = 0, addedSummary = 0;
+
+  if (dailyParsed) {
+    try {
+      addedDaily = DB.mergeDailyRows(dailyParsed);
+      log(`✓ Daily rows: ${addedDaily} new added (${dailyParsed.length - addedDaily} duplicates skipped)`, 'ok');
+    } catch (e) {
+      log(`✗ Error saving daily rows: ${e.message}`, 'err');
+    }
+  }
+
+  if (summaryParsed) {
+    try {
+      addedSummary = DB.mergeSummaryRows(summaryParsed);
+      log(`✓ Summary rows: ${addedSummary} new added (${summaryParsed.length - addedSummary} duplicates skipped)`, 'ok');
+    } catch (e) {
+      log(`✗ Error saving summary rows: ${e.message}`, 'err');
+    }
+  }
+
+  /* update last upload timestamp */
+  const cfg = DB.getConfig();
+  cfg.lastUpload = new Date().toLocaleString();
+  DB.saveConfig(cfg);
+
+  log(`✓ Done! Dashboard and reports are now updated.`, 'ok');
+  log(`  Go to Dashboard → to see the latest data.`, 'info');
+
+  document.getElementById('processStatus').textContent = `Saved at ${new Date().toLocaleTimeString()}`;
+  refreshStats();
+});
+
+/* ---- Reset files ---- */
+document.getElementById('resetFilesBtn').addEventListener('click', () => {
+  dailyParsed = summaryParsed = null;
+  ['dailyDrop','summaryDrop'].forEach(id => document.getElementById(id).classList.remove('ready'));
+  ['dailyPreviewWrap','summaryPreviewWrap'].forEach(id => document.getElementById(id).style.display = 'none');
+  ['dailyChosen','summaryChosen'].forEach(id => { document.getElementById(id).textContent = '✓ File selected'; });
+  document.getElementById('processBtn').disabled = true;
+  document.getElementById('processStatus').textContent = '';
+  log('Files reset.', 'warn');
+});
+
+/* ---- Clear all stored data ---- */
+document.getElementById('clearDataBtn').addEventListener('click', () => {
+  if (!confirm('This will delete ALL stored data. This cannot be undone. Continue?')) return;
+  DB.clearAll();
+  log('⚠ All stored data cleared.', 'warn');
+  refreshStats();
+});
+
+/* ---- Clear log ---- */
+document.getElementById('clearLogBtn').addEventListener('click', () => {
+  document.getElementById('logBox').innerHTML = '';
+});
+
+/* ---- Wire drop zones ---- */
+wireDropZone('dailyDrop',   'dailyFile',   'dailyChosen',   'dailyPreviewWrap',   'dailyPreview',   'dailyRowCount',   'daily');
+wireDropZone('summaryDrop', 'summaryFile', 'summaryChosen', 'summaryPreviewWrap', 'summaryPreview', 'summaryRowCount', 'summary');
+
+/* ---- Init ---- */
+refreshStats();
+</script>
+</body>
+</html>

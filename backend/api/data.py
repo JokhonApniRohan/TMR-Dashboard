@@ -1,37 +1,35 @@
 from fastapi import APIRouter
 
-from backend.services.file_manager import FileManager
-from backend.services.excel_loader import ExcelLoader
-
-router = APIRouter(
-    prefix="/data",
-    tags=["Data"]
-)
+from services.cache_manager import CacheManager
 
 
-@router.get("/summary")
+router = APIRouter()
 
-def load_summary():
 
-    files = FileManager.get_summary_files()
+@router.get("/data")
+def get_data():
 
-    df = ExcelLoader.load_multiple(files)
+    daily = CacheManager.load_daily()
+
+    summary = CacheManager.load_summary()
+
+    config = CacheManager.load_metadata()
 
     return {
-        "rows": len(df),
-        "columns": list(df.columns)
+
+        "daily_rows": daily.to_dict(orient="records"),
+
+        "summary_rows": summary.to_dict(orient="records"),
+
+        "config": config
     }
 
 
-@router.get("/activity")
+@router.delete("/data")
+def clear_data():
 
-def load_activity():
-
-    files = FileManager.get_activity_files()
-
-    df = ExcelLoader.load_multiple(files)
+    CacheManager.clear()
 
     return {
-        "rows": len(df),
-        "columns": list(df.columns)
+        "success": True
     }

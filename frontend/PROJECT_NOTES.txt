@@ -1,0 +1,219 @@
+TMR Tracking Dashboard - Project Notes
+=====================================
+
+1. Project purpose
+-----------------
+This dashboard is designed for TMR (Trade Market Representative) field operations tracking.
+It helps review:
+- Attendance
+- KPI performance
+- Daily activity and summary reports
+- TMR-wise performance
+- Date range and region-based filtering
+
+2. Main pages
+-------------
+- index.html : Main dashboard overview
+- attendance.html : Attendance view with filters and performance summary
+- kpi.html : KPI view with metric cards and charts
+- tmr-report.html : TMR detail report page
+- upload.html : Excel upload and processing page
+
+3. Main UI structure
+--------------------
+The app uses:
+- A left sidebar navigation
+- A top header with page title and actions
+- Cards for metrics and summary values
+- Charts for trends and comparisons
+- Tables for detailed records
+
+4. Primary color theme
+-----------------------
+- Primary: #007bff
+- Accent/Warning: #ffc107
+- White background
+- Neutral text and border colors
+
+5. Logo
+--------
+The app uses the uploaded logo file:
+- assets/upay_logo.png
+
+6. Data sources
+---------------
+The dashboard is designed to work with two Excel-based data sources:
+
+A. Daily Activity Report
+Expected columns include:
+- created_at
+- tmr_wallet
+- tmr_name
+- agent_wallet
+- agent_name
+- region
+- dh_code
+- distributor_house_name
+- checkin_time
+- checkout_time
+- visit_time_h_m_s
+- day_first_checkin
+- day_last_checkout
+- day_working_hour
+- document_title
+- exi_festoon_1
+- exi_poster_2
+- exi_shutter_pan_sticker_3
+- exi_running_sticker_4
+- exi_shop_screen_5
+- exi_table_sticker_6
+- exi_qr_stickerr_7
+- new_festoon_8
+- new_poster_9
+- new_shutter_pan_sticker_10
+- new_running_sticker_11
+- new_shop_screen_12
+- new_table_sticker_13
+- new_qr_stickerr_14
+- agent_lat
+- agent_long
+- activity_lat
+- activity_long
+- activity_distance_in_meter
+- under_distance_in_meter
+
+B. Date-wise Summary Report
+Expected columns include:
+- date_
+- region
+- dh_code
+- distributor_house_name
+- tmr_wallet
+- tmr_name
+- agent_visit_count
+- working_time_h_m_s
+- under 15 meter
+- >15 and <50
+- above 50 meter
+- no activity
+- total_new_festoon
+- total_new_poster
+- total_new_pan_sticker
+- total_new_running_sticker
+- total_new_shop_screen
+- total_new_table_sticker
+- total_new_qr_sticker
+
+7. Attendance calculation logic
+-------------------------------
+Attendance is planned to be calculated using these rules:
+
+Attendance Criteria (70% of total salary)
+1. Visit target achievement must be at least 75% of the daily unique visit target.
+2. The visit must be completed within official business hours: 10:00 AM to 7:00 PM.
+3. Each visit duration must be at least 3 minutes and not more than 10 minutes.
+4. Friday, government holiday, and paid leave entries will be treated as paid leave in the attendance logic. These values are expected to be numeric counts in the report sheet.
+5. Targets will be read from the uploaded sheet files rather than hardcoded in the UI.
+
+Suggested attendance output fields:
+- Present / Absent
+- Attendance %
+- Payable Day
+- Approved Leave
+- Market Hour Achievement
+- Strike Rate Achievement
+- Daily visit target
+- Monthly agent coverage target
+
+8. KPI calculation logic
+------------------------
+KPI is planned to be weighted as follows:
+
+A. Market Hour
+- Evaluation period: Monthly average
+- Target: 7 hours per working day
+- Weight: 25%
+- Calculation:
+  - If actual average market hours are less than target, score = 0
+  - If actual average exceeds target, score = actual hours / target hours
+
+B. Strike Rate
+- Evaluation period: Daily average
+- Target:
+  - 30 for Non-Metro
+  - 35 for DN/DS/CTG Metro
+  - 40 for Other Metro
+- Weight: 35%
+- Calculation:
+  - Actual visit count / target visit count
+
+C. Frequency-wise Achievement
+- Evaluation period: Weekly average
+- Target:
+  - 180 for Non-Metro
+  - 210 for DN/DS/CTG Metro
+  - 240 for Other Metro
+- Weight: 40%
+- Calculation:
+  - Actual visit count / target visit count
+
+9. Dashboard cards and charts
+-----------------------------
+The UI includes cards for:
+- Total TMRs
+- Total Visits
+- Average Market Hours
+- Attendance Rate
+- Total Regions
+- Total Agents Covered
+
+Charts planned or currently structured include:
+- Attendance trend chart
+- KPI trend chart
+- Region-wise visit chart
+- TMR performance chart
+
+10. Filtering features
+----------------------
+The dashboard is designed to support:
+- Date-wise filter
+- Date range filter
+- Region filter
+- TMR wallet filter
+- Agent-wise unique and repeated visit filter
+- Download/export of filtered reports
+
+11. Upload workflow
+-------------------
+The upload page is intended to:
+- Accept two Excel files
+- Preview the first rows of each file
+- Process and save the data locally
+- Store the data for recurring reports and calculations
+- Allow clear/reset actions
+
+12. Local storage approach
+--------------------------
+The front-end currently uses browser local storage to preserve uploaded data and support offline-style use.
+Suggested keys:
+- tmr_daily_data
+- tmr_summary_data
+- tmr_upload_log
+- tmr_processed_meta
+
+13. Recommended next steps
+--------------------------
+1. Connect the upload page to backend API later.
+2. Implement full attendance calculation logic.
+3. Implement KPI scoring formulas in JavaScript.
+4. Add export-to-Excel functionality.
+5. Add a polished TMR detail table with daily date columns.
+6. Connect the charts to actual processed data.
+
+14. Notes for the intern
+-----------------------
+- Keep the UI simple and professional.
+- Use the existing cards and charts as the main reporting structure.
+- Make every filter work from the processed data.
+- Keep calculations transparent and easy to explain to the manager.
+- Prefer simple JavaScript functions and modular code.

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KPI — TMR Tracker</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" />
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark"><img src="assets/upay_logo.png" alt="UPAY Logo" onerror="this.style.display='none'" /></div>
+      <div>
+        <div class="brand-name">TMR Tracker</div>
+        <div class="brand-sub">Field Operations</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a href="index.html" class="nav-item"><i class="ti ti-layout-dashboard nav-icon"></i> Dashboard</a>
+      <a href="tmr-report.html" class="nav-item"><i class="ti ti-users nav-icon"></i> TMR Report</a>
+      <a href="attendance.html" class="nav-item"><i class="ti ti-calendar-stats nav-icon"></i> Attendance</a>
+      <a href="kpi.html" class="nav-item active"><i class="ti ti-chart-bar nav-icon"></i> KPI</a>
+      <div class="nav-section-label">Data</div>
+      <a href="upload.html" class="nav-item"><i class="ti ti-file-upload nav-icon"></i> Upload Excel</a>
+      <a href="#" class="nav-item"><i class="ti ti-download nav-icon"></i> Export Report</a>
+    </nav>
+    <div class="sidebar-footer">Last upload: <span id="lastUpload">—</span></div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="btn btn-secondary btn-sm" id="menuToggle"><i class="ti ti-menu-2"></i></button>
+        <div>
+          <div class="page-title">KPI</div>
+          <div class="page-subtitle">Review market-hour, strike-rate, and weighted KPI scores</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="filter-bar">
+      <div class="filter-group"><label for="filterFrom">From</label><input type="date" id="filterFrom" /></div>
+      <div class="filter-group"><label for="filterTo">To</label><input type="date" id="filterTo" /></div>
+      <div class="filter-group"><label for="filterRegion">Region</label><select id="filterRegion"><option value="">All Regions</option></select></div>
+      <div class="filter-group"><label for="filterWallet">Wallet</label><select id="filterWallet"><option value="">All wallets</option></select></div>
+      <button class="btn btn-primary btn-sm" id="applyFilters"><i class="ti ti-filter btn-icon"></i> Apply</button>
+      <button class="btn btn-secondary btn-sm" id="resetFilters">Reset</button>
+    </div>
+
+    <main class="page-body">
+      <div class="metric-grid" style="margin-bottom:20px;">
+        <div class="metric-card"><div class="metric-label">Avg market hours</div><div class="metric-value" id="avgMarketScore">—</div><div class="metric-sub">Market hour KPI</div></div>
+        <div class="metric-card amber"><div class="metric-label">Avg strike rate</div><div class="metric-value" id="avgStrikeScore">—</div><div class="metric-sub">Visit KPI</div></div>
+        <div class="metric-card green"><div class="metric-label">Avg frequency</div><div class="metric-value" id="avgFreqScore">—</div><div class="metric-sub">Weekly target</div></div>
+        <div class="metric-card"><div class="metric-label">Avg total KPI</div><div class="metric-value" id="avgTotalScore">—</div><div class="metric-sub">Weighted score</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">KPI breakdown</div>
+            <div class="section-sub">Weighted KPI score per TMR</div>
+          </div>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>TMR Wallet</th>
+                  <th>TMR Name</th>
+                  <th>Region</th>
+                  <th>Market Hr KPI</th>
+                  <th>Strike KPI</th>
+                  <th>Total KPI</th>
+                </tr>
+              </thead>
+              <tbody id="kpiBody">
+                <tr><td colspan="6" class="empty-state">No data yet. Upload files first.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/main.js"></script>
+<script src="js/kpi.js"></script>
+</body>
+</html>

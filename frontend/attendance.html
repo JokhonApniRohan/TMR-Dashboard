@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Attendance — TMR Tracker</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" />
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark"><img src="assets/upay_logo.png" alt="UPAY Logo" onerror="this.style.display='none'" /></div>
+      <div>
+        <div class="brand-name">TMR Tracker</div>
+        <div class="brand-sub">Field Operations</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a href="index.html" class="nav-item"><i class="ti ti-layout-dashboard nav-icon"></i> Dashboard</a>
+      <a href="tmr-report.html" class="nav-item"><i class="ti ti-users nav-icon"></i> TMR Report</a>
+      <a href="attendance.html" class="nav-item active"><i class="ti ti-calendar-stats nav-icon"></i> Attendance</a>
+      <a href="kpi.html" class="nav-item"><i class="ti ti-chart-bar nav-icon"></i> KPI</a>
+      <div class="nav-section-label">Data</div>
+      <a href="upload.html" class="nav-item"><i class="ti ti-file-upload nav-icon"></i> Upload Excel</a>
+      <a href="#" class="nav-item"><i class="ti ti-download nav-icon"></i> Export Report</a>
+    </nav>
+    <div class="sidebar-footer">Last upload: <span id="lastUpload">—</span></div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="btn btn-secondary btn-sm" id="menuToggle"><i class="ti ti-menu-2"></i></button>
+        <div>
+          <div class="page-title">Attendance</div>
+          <div class="page-subtitle">Filter and review attendance by date and TMR</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="filter-bar">
+      <div class="filter-group"><label for="filterFrom">From</label><input type="date" id="filterFrom" /></div>
+      <div class="filter-group"><label for="filterTo">To</label><input type="date" id="filterTo" /></div>
+      <div class="filter-group"><label for="filterRegion">Region</label><select id="filterRegion"><option value="">All Regions</option></select></div>
+      <div class="filter-group"><label for="filterWallet">Wallet</label><select id="filterWallet"><option value="">All wallets</option></select></div>
+      <button class="btn btn-primary btn-sm" id="applyFilters"><i class="ti ti-filter btn-icon"></i> Apply</button>
+      <button class="btn btn-secondary btn-sm" id="resetFilters">Reset</button>
+    </div>
+
+    <main class="page-body">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Attendance summary</div>
+            <div class="section-sub">Present vs payable days for each TMR</div>
+          </div>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>TMR Wallet</th>
+                  <th>TMR Name</th>
+                  <th>Region</th>
+                  <th>Present Days</th>
+                  <th>Payable Days</th>
+                  <th>Attendance %</th>
+                  <th>Avg Market Hrs</th>
+                  <th>Avg Strike</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceBody">
+                <tr><td colspan="8" class="empty-state">No data yet. Upload files first.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/main.js"></script>
+<script src="js/attendance.js"></script>
+</body>
+</html>
