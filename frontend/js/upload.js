@@ -11,13 +11,17 @@ function initUploadPage() {
   const resetFilesBtn = document.getElementById('resetFilesBtn');
   const clearDataBtn = document.getElementById('clearDataBtn');
   const clearLogBtn = document.getElementById('clearLogBtn');
+  const targetInput = document.getElementById("targetFile");
+  const targetDrop = document.getElementById("targetDrop");
 
   let dailyParsed = null;
   let summaryParsed = null;
+  let targetParsed = null;
 
   const state = {
     daily: null,
-    summary: null
+    summary: null,
+    target: null
   };
 
   function log(message, type = 'info') {
@@ -59,10 +63,30 @@ function initUploadPage() {
   }
 
   function resetPreview(type) {
-    const previewWrap = type === 'daily' ? document.getElementById('dailyPreviewWrap') : document.getElementById('summaryPreviewWrap');
-    const preview = type === 'daily' ? document.getElementById('dailyPreview') : document.getElementById('summaryPreview');
-    const rowCount = type === 'daily' ? document.getElementById('dailyRowCount') : document.getElementById('summaryRowCount');
-    const chosen = type === 'daily' ? document.getElementById('dailyChosen') : document.getElementById('summaryChosen');
+    const previewWrap =
+    type === "daily"
+        ? document.getElementById("dailyPreviewWrap")
+        : type === "summary"
+        ? document.getElementById("summaryPreviewWrap")
+        : document.getElementById("targetPreviewWrap");
+    const preview =
+    type === "daily"
+        ? document.getElementById("dailyPreviewWrap")
+        : type === "summary"
+        ? document.getElementById("summaryPreviewWrap")
+        : document.getElementById("targetPreviewWrap");
+    const rowCount =
+    type === "daily"
+        ? document.getElementById("dailyPreviewWrap")
+        : type === "summary"
+        ? document.getElementById("summaryPreviewWrap")
+        : document.getElementById("targetPreviewWrap");
+    const chosen =
+    type === "daily"
+        ? document.getElementById("dailyPreviewWrap")
+        : type === "summary"
+        ? document.getElementById("summaryPreviewWrap")
+        : document.getElementById("targetPreviewWrap");
     if (previewWrap) previewWrap.style.display = 'none';
     if (preview) preview.innerHTML = '';
     if (rowCount) rowCount.textContent = '';
@@ -70,15 +94,23 @@ function initUploadPage() {
     if (type === 'daily') {
       dailyParsed = null;
       state.daily = null;
-    } else {
+    } else if (type === 'summary') {
       summaryParsed = null;
       state.summary = null;
+    } else if (type === 'target') {
+      targetParsed = null;
+      state.target = null;
     }
     updateProcessState();
   }
 
   function updateProcessState() {
-    const enabled = Boolean(state.daily || state.summary);
+    const enabled =
+    Boolean(
+        state.daily ||
+        state.summary ||
+        state.target
+    );
     if (processBtn) processBtn.disabled = !enabled;
     const status = document.getElementById('processStatus');
     if (status) status.textContent = enabled ? 'Ready to process selected files.' : 'Select at least one Excel file to continue.';

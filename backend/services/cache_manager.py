@@ -17,7 +17,7 @@ CACHE_DIR.mkdir(exist_ok=True)
 DAILY_CACHE = CACHE_DIR / "daily_master.parquet"
 SUMMARY_CACHE = CACHE_DIR / "summary_master.parquet"
 METADATA_FILE = CACHE_DIR / "metadata.json"
-
+TARGET_CACHE = CACHE_DIR / "target_master.parquet"
 
 class CacheManager:
 
@@ -93,5 +93,28 @@ class CacheManager:
         if SUMMARY_CACHE.exists():
             SUMMARY_CACHE.unlink()
 
+        if TARGET_CACHE.exists():
+            TARGET_CACHE.unlink()
+
         if METADATA_FILE.exists():
             METADATA_FILE.unlink()
+
+        @staticmethod
+        def load_target():
+
+            if not TARGET_CACHE.exists():
+                return pd.DataFrame()
+
+            if TARGET_CACHE.stat().st_size == 0:
+                return pd.DataFrame()
+
+            return pd.read_parquet(TARGET_CACHE)
+
+
+        @staticmethod
+        def save_target(df: pd.DataFrame):
+
+            df.to_parquet(
+                TARGET_CACHE,
+                index=False
+            )   

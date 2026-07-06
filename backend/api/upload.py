@@ -9,10 +9,9 @@ router = APIRouter()
 
 class UploadPayload(BaseModel):
 
-    daily_rows: list
-
-    summary_rows: list
-
+    daily_rows: list = []
+    summary_rows: list = []
+    target_rows: list = []
     config: dict = {}
 
 
@@ -20,7 +19,8 @@ class UploadPayload(BaseModel):
 def process_upload(payload: UploadPayload):
 
     return UploadService.process_upload(
-        payload.daily_rows,
-        payload.summary_rows,
-        payload.config
+        daily_rows=payload.daily_rows,
+        summary_rows=payload.summary_rows,
+        target_rows=payload.target_rows,
+        config=payload.config
     )

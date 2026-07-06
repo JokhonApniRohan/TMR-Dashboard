@@ -2,13 +2,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.upload import router as upload_router
-
 from api.data import router as data_router
+from api.report import router as report_router
+
+
 
 app = FastAPI(
     title="TMR Dashboard API",
     version="1.0.0"
 )
+app.include_router(report_router)
 
 app.add_middleware(
     CORSMiddleware,
