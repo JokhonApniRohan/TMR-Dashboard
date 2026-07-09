@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.upload import router as upload_router
 from api.data import router as data_router
 from api.report import router as report_router
+from api.dh_master import router as dh_master_router
 
 
 
@@ -31,6 +32,12 @@ app.include_router(
     data_router,
     prefix="/api",
     tags=["Data"]
+)
+
+app.include_router(
+    dh_master_router,
+    prefix="/api/dh-master",
+    tags=["DH Master"]
 )
 
 @app.get("/")

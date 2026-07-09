@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DH Master — TMR Tracker</title>
+  <meta name="description" content="Manage Distributor House master data including DH Code, name, market type, and daily visit targets for TMR planning." />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    /* ===== DH Master Page Styles ===== */
+    .dh-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .table-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 200px;
+      max-width: 340px;
+    }
+
+    .search-wrap input {
+      width: 100%;
+      padding-left: 32px;
+      height: 32px;
+      font-size: 12px;
+    }
+
+    .search-wrap .search-icon {
+      position: absolute;
+      left: 9px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 15px;
+      pointer-events: none;
+    }
+
+    .toolbar-spacer { flex: 1; }
+
+    .filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .pill {
+      height: 28px;
+      padding: 0 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--white);
+      color: var(--text-secondary);
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .pill:hover { background: var(--bg); border-color: #c0c4cc; }
+    .pill.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+    .btn-icon-sm {
+      width: 28px; height: 28px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--white);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      transition: background 0.15s, color 0.15s;
+      color: var(--text-secondary);
+    }
+    .btn-icon-sm:hover { background: var(--bg); }
+    .btn-icon-sm.edit:hover { color: var(--blue); border-color: var(--blue); }
+    .btn-icon-sm.del:hover  { color: var(--red);  border-color: var(--red);  }
+
+    .mtype-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 10px; border-radius: 20px;
+      font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .mtype-urban  { background: #e0f2fe; color: #0369a1; }
+    .mtype-rural  { background: #d1fae5; color: #065f46; }
+    .mtype-metro  { background: #ede9fe; color: #5b21b6; }
+    .mtype-semi   { background: #fef3c7; color: #92400e; }
+    .mtype-default{ background: var(--bg); color: var(--text-muted); }
+
+    .target-cell { display: flex; align-items: center; gap: 8px; }
+    .target-bar-wrap { flex:1; height:6px; background:#e9ecef; border-radius:4px; overflow:hidden; min-width:50px; }
+    .target-bar-fill { height:100%; background:var(--blue); border-radius:4px; }
+    .target-num { font-weight:600; color:var(--text-primary); min-width:28px; text-align:right; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.38); z-index: 500;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal-box {
+      background: var(--white); border-radius: var(--radius-lg);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+      width: 100%; max-width: 500px;
+      animation: modalIn 0.2s ease;
+    }
+    @keyframes modalIn {
+      from { opacity:0; transform:scale(0.96) translateY(8px); }
+      to   { opacity:1; transform:scale(1) translateY(0); }
+    }
+
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
+    }
+    .modal-title { font-size:14px; font-weight:600; color:var(--text-primary); }
+    .modal-close {
+      width:30px; height:30px; border-radius:50%; border:none;
+      background:none; cursor:pointer; font-size:18px;
+      display:flex; align-items:center; justify-content:center;
+      color:var(--text-muted); transition:background 0.15s;
+    }
+    .modal-close:hover { background:var(--bg); color:var(--text-primary); }
+    .modal-body { padding:20px; }
+    .modal-footer {
+      padding:14px 20px; border-top:1px solid var(--border);
+      display:flex; justify-content:flex-end; gap:8px;
+    }
+
+    .form-group { margin-bottom:16px; }
+    .form-group label { display:block; font-size:12px; font-weight:500; color:var(--text-secondary); margin-bottom:5px; }
+    .form-group input, .form-group select { width:100%; height:36px; font-size:13px; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .form-hint { font-size:11px; color:var(--text-muted); margin-top:4px; }
+    .field-error { font-size:11px; color:var(--red); margin-top:3px; display:none; }
+    .field-error.show { display:block; }
+
+    .import-drop {
+      border:2px dashed var(--border); border-radius:var(--radius);
+      padding:28px 20px; text-align:center; cursor:pointer;
+      transition:border-color 0.2s, background 0.2s; position:relative;
+    }
+    .import-drop:hover, .import-drop.drag-over { border-color:var(--blue); background:var(--blue-light); }
+    .import-drop input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+
+    .modal-danger .modal-header { border-bottom-color:var(--red-light); }
+    .modal-danger .modal-title  { color:var(--red); }
+
+    /* Toast */
+    .toast-container {
+      position:fixed; bottom:24px; right:24px;
+      display:flex; flex-direction:column; gap:8px; z-index:9999;
+    }
+    .toast {
+      background:var(--white); border:1px solid var(--border);
+      border-left:4px solid var(--green); border-radius:var(--radius);
+      padding:12px 16px; font-size:12px; font-weight:500;
+      color:var(--text-primary); box-shadow:var(--shadow-md);
+      animation:toastIn 0.25s ease; max-width:280px;
+      display:flex; align-items:center; gap:8px;
+    }
+    .toast.error { border-left-color:var(--red); }
+    .toast.warn  { border-left-color:var(--amber); }
+    @keyframes toastIn {
+      from { opacity:0; transform:translateY(10px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* Pagination */
+    .pagination {
+      display:flex; align-items:center; gap:4px;
+      padding:12px 18px; border-top:1px solid var(--border);
+      justify-content:flex-end; flex-wrap:wrap;
+    }
+    .page-info { font-size:11px; color:var(--text-muted); margin-right:8px; }
+    .page-btn {
+      width:28px; height:28px; border-radius:var(--radius-sm);
+      border:1px solid var(--border); background:var(--white);
+      cursor:pointer; font-size:12px;
+      display:flex; align-items:center; justify-content:center;
+      transition:background 0.15s;
+    }
+    .page-btn:hover { background:var(--bg); }
+    .page-btn.active { background:var(--blue); color:white; border-color:var(--blue); font-weight:600; }
+    .page-btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+    .table-empty { text-align:center; padding:56px 20px; color:var(--text-muted); }
+    .table-empty i { font-size:40px; opacity:0.4; display:block; margin-bottom:10px; }
+    .table-empty p { font-size:13px; }
+
+    @keyframes rowHighlight {
+      0%   { background:var(--blue-light); }
+      100% { background:transparent; }
+    }
+    .row-new { animation:rowHighlight 1.8s ease forwards; }
+  </style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <img src="assets/upay_logo.png" alt="UPAY Logo" onerror="this.style.display='none'" />
+      </div>
+      <div>
+        <div class="brand-name">TMR Tracker</div>
+        <div class="brand-sub">Field Operations</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a href="index.html" class="nav-item"><i class="ti ti-layout-dashboard nav-icon"></i> Dashboard</a>
+      <a href="tmr-report.html" class="nav-item"><i class="ti ti-users nav-icon"></i> TMR Report</a>
+      <a href="attendance.html" class="nav-item"><i class="ti ti-calendar-stats nav-icon"></i> Attendance</a>
+      <a href="kpi.html" class="nav-item"><i class="ti ti-chart-bar nav-icon"></i> KPI</a>
+
+      <div class="nav-section-label">Master Data</div>
+      <a href="dh-master.html" class="nav-item active"><i class="ti ti-building-store nav-icon"></i> DH Master</a>
+
+      <div class="nav-section-label">Data</div>
+      <a href="upload.html" class="nav-item"><i class="ti ti-file-upload nav-icon"></i> Upload Excel</a>
+      <a href="#" class="nav-item" id="exportBtn"><i class="ti ti-download nav-icon"></i> Export Report</a>
+    </nav>
+
+    <div class="sidebar-footer">
+      Last upload: <span id="lastUpload">—</span>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <div class="main-content">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="btn btn-secondary btn-sm" id="menuToggle" title="Toggle sidebar">
+          <i class="ti ti-menu-2"></i>
+        </button>
+        <div>
+          <div class="page-title">DH Master</div>
+          <div class="page-subtitle">Distributor House database — visit targets &amp; market types</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-secondary btn-sm" id="importExcelBtn">
+          <i class="ti ti-file-import btn-icon"></i> Import Excel
+        </button>
+        <button class="btn btn-secondary btn-sm" id="exportCsvBtn">
+          <i class="ti ti-download btn-icon"></i> Export CSV
+        </button>
+        <button class="btn btn-primary btn-sm" id="addDhBtn">
+          <i class="ti ti-plus btn-icon"></i> Add DH
+        </button>
+      </div>
+    </header>
+
+    <main class="page-body">
+
+      <!-- Summary cards -->
+      <div class="dh-stats">
+        <div class="metric-card">
+          <div class="metric-label">Total DH Houses</div>
+          <div class="metric-value" id="statTotal">—</div>
+          <div class="metric-sub">All records</div>
+        </div>
+        <div class="metric-card green">
+          <div class="metric-label">Avg Daily Target</div>
+          <div class="metric-value" id="statAvgTarget">—</div>
+          <div class="metric-sub">Visits per day</div>
+        </div>
+        <div class="metric-card amber">
+          <div class="metric-label">Max Target</div>
+          <div class="metric-value" id="statMaxTarget">—</div>
+          <div class="metric-sub" id="statMaxDH">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Market Types</div>
+          <div class="metric-value" id="statMarketTypes">—</div>
+          <div class="metric-sub">Distinct types</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Total Daily Target</div>
+          <div class="metric-value" id="statTotalTarget">—</div>
+          <div class="metric-sub">Sum of all targets</div>
+        </div>
+      </div>
+
+      <!-- Main table card -->
+      <div class="card">
+
+        <div class="table-toolbar">
+          <div class="search-wrap">
+            <i class="ti ti-search search-icon"></i>
+            <input type="text" id="searchInput" placeholder="Search DH Code or Name…" />
+          </div>
+
+          <div class="filter-pills" id="marketPills">
+            <button class="pill active" data-market="">All</button>
+          </div>
+
+          <div class="toolbar-spacer"></div>
+          <span id="tableCount" style="font-size:11px;color:var(--text-muted);white-space:nowrap;"></span>
+        </div>
+
+        <div class="table-wrap" style="min-height:260px;">
+          <table id="dhTable">
+            <thead>
+              <tr>
+                <th class="sortable" data-col="dh_code">DH Code</th>
+                <th class="sortable" data-col="dh_name">Distributor House Name</th>
+                <th class="sortable" data-col="market_type">Market Type</th>
+                <th class="sortable" data-col="daily_target">Daily Visit Target</th>
+                <th style="width:80px;text-align:center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="dhTableBody">
+              <tr>
+                <td colspan="5">
+                  <div class="table-empty">
+                    <i class="ti ti-building-store"></i>
+                    <p>No DH records yet. Click <strong>Add DH</strong> or <strong>Import Excel</strong> to get started.</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination" id="paginationBar"></div>
+
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ADD / EDIT MODAL -->
+<div class="modal-overlay" id="dhModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Add Distributor House</div>
+      <button class="modal-close" id="modalCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="fDhCode">DH Code <span style="color:var(--red)">*</span></label>
+          <input type="text" id="fDhCode" placeholder="e.g. DH-001" maxlength="30" />
+          <div class="field-error" id="errDhCode">DH Code is required and must be unique.</div>
+        </div>
+        <div class="form-group">
+          <label for="fMarketType">Market Type <span style="color:var(--red)">*</span></label>
+          <select id="fMarketType">
+            <option value="">Select type…</option>
+            <option value="Urban">Urban</option>
+            <option value="Rural">Rural</option>
+            <option value="Metro">Metro</option>
+            <option value="Semi-Urban">Semi-Urban</option>
+          </select>
+          <div class="field-error" id="errMarketType">Please select a market type.</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="fDhName">Distributor House Name <span style="color:var(--red)">*</span></label>
+        <input type="text" id="fDhName" placeholder="e.g. Dhaka North DH" maxlength="120" />
+        <div class="field-error" id="errDhName">Name is required.</div>
+      </div>
+      <div class="form-group">
+        <label for="fDailyTarget">Daily Visit Target <span style="color:var(--red)">*</span></label>
+        <input type="number" id="fDailyTarget" placeholder="e.g. 35" min="1" max="999" step="1"
+               style="width:100%;height:36px;font-size:13px;" />
+        <div class="form-hint">Number of agent visits a TMR should complete per working day for this DH.</div>
+        <div class="field-error" id="errDailyTarget">Please enter a valid target (1–999).</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="modalCancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="modalSaveBtn">
+        <i class="ti ti-device-floppy btn-icon"></i> Save
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-overlay" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+  <div class="modal-box modal-danger" style="max-width:400px;">
+    <div class="modal-header">
+      <div class="modal-title" id="deleteModalTitle">
+        <i class="ti ti-alert-triangle"></i> Delete Record
+      </div>
+      <button class="modal-close" id="deleteModalClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;">
+        Are you sure you want to delete <strong id="deleteTargetName"></strong>?<br/>
+        This action <strong>cannot be undone</strong>.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="deleteCancelBtn">Cancel</button>
+      <button class="btn" id="deleteConfirmBtn"
+        style="background:var(--red);color:white;border-color:var(--red);">
+        <i class="ti ti-trash btn-icon"></i> Delete
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT EXCEL MODAL -->
+<div class="modal-overlay" id="importModal" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="modal-header">
+      <div class="modal-title" id="importModalTitle">
+        <i class="ti ti-file-import" style="color:var(--blue);margin-right:4px;"></i> Import from Excel
+      </div>
+      <button class="modal-close" id="importModalClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info" style="margin-bottom:14px;">
+        <i class="ti ti-info-circle" style="font-size:15px;flex-shrink:0;"></i>
+        <span>Your Excel file must have these columns (any order, case-insensitive):<br/>
+          <strong>DH Code &nbsp;|&nbsp; Distributor House Name &nbsp;|&nbsp; Market type &nbsp;|&nbsp; Daily visit target</strong>
+        </span>
+      </div>
+      <div class="import-drop" id="importDrop">
+        <input type="file" id="importFile" accept=".xlsx,.xls,.csv" />
+        <i class="ti ti-table-import"
+           style="font-size:36px;color:var(--text-muted);margin-bottom:8px;display:block;"></i>
+        <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">
+          Drop your Excel / CSV file here
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);">or click to browse — .xlsx / .xls / .csv</div>
+      </div>
+      <div id="importPreviewWrap" style="margin-top:14px;display:none;">
+        <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:6px;">Preview (first 5 rows)</div>
+        <div class="table-wrap" style="max-height:180px;overflow-y:auto;">
+          <table id="importPreviewTable" style="font-size:11px;"></table>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px;" id="importRowCount"></div>
+      </div>
+      <div id="importModeWrap" style="margin-top:14px;display:none;">
+        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Import mode:</div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;margin-bottom:6px;">
+          <input type="radio" name="importMode" value="merge" checked id="importMerge" />
+          Merge (add new, skip duplicates by DH Code)
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+          <input type="radio" name="importMode" value="replace" id="importReplace" />
+          Replace all (overwrite existing data)
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="importCancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="importConfirmBtn" disabled>
+        <i class="ti ti-check btn-icon"></i> Import
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="js/main.js"></script>
+<script src="js/dh-master.js"></script>
+</body>
+</html>

@@ -31,26 +31,6 @@
    ============================================================ */
 
 const DB = {
-  _loaded: false,
-
-  bootstrap() {
-    if (this._loaded) return;
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', 'http://127.0.0.1:8000/api/data', false);
-    xhr.send();
-    if (xhr.status === 200) {
-      try {
-        const data = JSON.parse(xhr.responseText || '{}');
-        this.saveDailyRows(Array.isArray(data.daily_rows) ? data.daily_rows : []);
-        this.saveSummaryRows(Array.isArray(data.summary_rows) ? data.summary_rows : []);
-        this.saveConfig(data.config || {});
-      } catch (error) {
-        console.warn('Unable to hydrate data from backend', error);
-      }
-    }
-    this._loaded = true;
-  },
-
   /* ---- read ---- */
   getDailyRows()   { return JSON.parse(localStorage.getItem('tmr_daily_rows')   || '[]'); },
   getSummaryRows() { return JSON.parse(localStorage.getItem('tmr_summary_rows') || '[]'); },
@@ -61,45 +41,33 @@ const DB = {
   saveSummaryRows(rows) { localStorage.setItem('tmr_summary_rows', JSON.stringify(rows)); },
   saveConfig(cfg)       { localStorage.setItem('tmr_config',       JSON.stringify(cfg));  },
 
-  async saveUploadedData(dailyRows, summaryRows, config = {}) {
-    const payload = {
-      daily_rows: dailyRows || [],
-      summary_rows: summaryRows || [],
-      config: {
-        ...this.getConfig(),
-        ...config,
-        lastUpload: config.lastUpload || new Date().toLocaleString()
-      }
-    };
-
-    const response = await fetch('http://127.0.0.1:8000/api/upload/process', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text || 'Upload failed');
-    }
-
-    const data = await response.json();
-    this.saveDailyRows(Array.isArray(data.daily_rows) ? data.daily_rows : []);
-    this.saveSummaryRows(Array.isArray(data.summary_rows) ? data.summary_rows : []);
-    this.saveConfig(data.config || {});
-    return data;
+  /* ---- merge (append new rows, avoid duplicates by date+wallet) ---- */
+  mergeDailyRows(newRows) {
+    const existing = this.getDailyRows();
+    const key = r => `${r.created_at}|${r.tmr_wallet}|${r.agent_wallet}`;
+    const existSet = new Set(existing.map(key));
+    const added = newRows.filter(r => !existSet.has(key(r)));
+    const merged = [...existing, ...added];
+    this.saveDailyRows(merged);
+    return added.length;
+  },
+  mergeSummaryRows(newRows) {
+    const existing = this.getSummaryRows();
+    const key = r => `${r.date_}|${r.tmr_wallet}`;
+    const existSet = new Set(existing.map(key));
+    const added = newRows.filter(r => !existSet.has(key(r)));
+    const merged = [...existing, ...added];
+    this.saveSummaryRows(merged);
+    return added.length;
   },
 
-  async clearAll() {
-    const response = await fetch('http://127.0.0.1:8000/api/data', { method: 'DELETE' });
-    if (!response.ok) throw new Error('Unable to clear backend data');
+  /* ---- clear ---- */
+  clearAll() {
     localStorage.removeItem('tmr_daily_rows');
     localStorage.removeItem('tmr_summary_rows');
     localStorage.removeItem('tmr_config');
   }
 };
-
-DB.bootstrap();
 
 /* ============================================================
    FILTER HELPERS

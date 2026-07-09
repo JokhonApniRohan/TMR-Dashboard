@@ -11,17 +11,13 @@ function initUploadPage() {
   const resetFilesBtn = document.getElementById('resetFilesBtn');
   const clearDataBtn = document.getElementById('clearDataBtn');
   const clearLogBtn = document.getElementById('clearLogBtn');
-  const targetInput = document.getElementById("targetFile");
-  const targetDrop = document.getElementById("targetDrop");
 
   let dailyParsed = null;
   let summaryParsed = null;
-  let targetParsed = null;
 
   const state = {
     daily: null,
-    summary: null,
-    target: null
+    summary: null
   };
 
   function log(message, type = 'info') {
@@ -63,30 +59,10 @@ function initUploadPage() {
   }
 
   function resetPreview(type) {
-    const previewWrap =
-    type === "daily"
-        ? document.getElementById("dailyPreviewWrap")
-        : type === "summary"
-        ? document.getElementById("summaryPreviewWrap")
-        : document.getElementById("targetPreviewWrap");
-    const preview =
-    type === "daily"
-        ? document.getElementById("dailyPreviewWrap")
-        : type === "summary"
-        ? document.getElementById("summaryPreviewWrap")
-        : document.getElementById("targetPreviewWrap");
-    const rowCount =
-    type === "daily"
-        ? document.getElementById("dailyPreviewWrap")
-        : type === "summary"
-        ? document.getElementById("summaryPreviewWrap")
-        : document.getElementById("targetPreviewWrap");
-    const chosen =
-    type === "daily"
-        ? document.getElementById("dailyPreviewWrap")
-        : type === "summary"
-        ? document.getElementById("summaryPreviewWrap")
-        : document.getElementById("targetPreviewWrap");
+    const previewWrap = type === 'daily' ? document.getElementById('dailyPreviewWrap') : document.getElementById('summaryPreviewWrap');
+    const preview = type === 'daily' ? document.getElementById('dailyPreview') : document.getElementById('summaryPreview');
+    const rowCount = type === 'daily' ? document.getElementById('dailyRowCount') : document.getElementById('summaryRowCount');
+    const chosen = type === 'daily' ? document.getElementById('dailyChosen') : document.getElementById('summaryChosen');
     if (previewWrap) previewWrap.style.display = 'none';
     if (preview) preview.innerHTML = '';
     if (rowCount) rowCount.textContent = '';
@@ -94,23 +70,15 @@ function initUploadPage() {
     if (type === 'daily') {
       dailyParsed = null;
       state.daily = null;
-    } else if (type === 'summary') {
+    } else {
       summaryParsed = null;
       state.summary = null;
-    } else if (type === 'target') {
-      targetParsed = null;
-      state.target = null;
     }
     updateProcessState();
   }
 
   function updateProcessState() {
-    const enabled =
-    Boolean(
-        state.daily ||
-        state.summary ||
-        state.target
-    );
+    const enabled = Boolean(state.daily || state.summary);
     if (processBtn) processBtn.disabled = !enabled;
     const status = document.getElementById('processStatus');
     if (status) status.textContent = enabled ? 'Ready to process selected files.' : 'Select at least one Excel file to continue.';
@@ -317,7 +285,7 @@ function initUploadPage() {
   });
 
   if (processBtn) {
-    processBtn.addEventListener('click', async () => {
+    processBtn.addEventListener('click', () => {
       const dailyRows = state.daily || [];
       const summaryRows = state.summary || [];
       if (!dailyRows.length && !summaryRows.length) {
@@ -325,16 +293,16 @@ function initUploadPage() {
         return;
       }
 
-      try {
-        const result = await DB.saveUploadedData(dailyRows, summaryRows);
-        log(`Saved ${result.daily_inserted} new daily rows and ${result.summary_inserted} new summary rows.`, 'ok');
-        refreshStats();
-        updateProcessState();
-        const status = document.getElementById('processStatus');
-        if (status) status.textContent = 'Data saved to the backend. You can open the dashboard now.';
-      } catch (error) {
-        log(`Upload failed: ${error.message}`, 'err');
-      }
+      const addedDaily = DB.mergeDailyRows(dailyRows);
+      const addedSummary = DB.mergeSummaryRows(summaryRows);
+      const cfg = DB.getConfig();
+      cfg.lastUpload = new Date().toLocaleString();
+      DB.saveConfig(cfg);
+
+      log(`Saved ${addedDaily} new daily rows and ${addedSummary} new summary rows.`, 'ok');
+      refreshStats();
+      updateProcessState();
+      document.getElementById('processStatus').textContent = 'Data saved locally. You can open the dashboard now.';
     });
   }
 
@@ -351,19 +319,15 @@ function initUploadPage() {
   }
 
   if (clearDataBtn) {
-    clearDataBtn.addEventListener('click', async () => {
-      if (confirm('Remove all uploaded data from the backend?')) {
-        try {
-          await DB.clearAll();
-          refreshStats();
-          resetPreview('daily');
-          resetPreview('summary');
-          setDropState(dailyDrop, false);
-          setDropState(summaryDrop, false);
-          log('All backend data was cleared.', 'warn');
-        } catch (error) {
-          log(`Clear failed: ${error.message}`, 'err');
-        }
+    clearDataBtn.addEventListener('click', () => {
+      if (confirm('Remove all uploaded data from this browser?')) {
+        DB.clearAll();
+        refreshStats();
+        resetPreview('daily');
+        resetPreview('summary');
+        setDropState(dailyDrop, false);
+        setDropState(summaryDrop, false);
+        log('All local data was cleared.', 'warn');
       }
     });
   }
